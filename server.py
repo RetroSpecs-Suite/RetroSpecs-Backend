@@ -10,6 +10,10 @@ import base64
 from pathlib import Path
 from openai import OpenAI
 from dotenv import load_dotenv
+import chromadb
+from vectorDB import VectorDB
+
+db = VectorDB()
 
 load_dotenv()
 
@@ -45,7 +49,9 @@ def upload_image():
         except Exception as e:
             print(f"Invalid base64: {str(e)}")
         
-        print(get_image_description(base64_image))
+        desc = get_image_description(base64_image)
+
+        db.add_photo(desc, timestamp, filename)
 
         return {
             "message": "Image received successfully",
@@ -91,6 +97,50 @@ def get_image_description(base64_string):
     )
 
     return response.choices[0]
+
+
+@app.route("/response", methods=['POST'])
+def process_query():
+    data = request.get_json()
+
+    query = data['query']
+
+    try:
+       results = db.query_photos(query)
+    except Exception as e:
+        print(str(e))
+        return {
+            "errorMessage": "error occurred during db query",
+        }, 400
+
+    json_res = json.dumps(results)
+
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": query,
+                        },
+                    ],
+                }
+            ]
+        )
+    except Exception as e:
+        print(str(e))
+        return {
+            "errorMessage": "OpenAI error: " + str(e)
+        }, 400
+    
+    return response.choices[0].message
+
+    
+
+        
 
 
 if __name__ == "__main__":

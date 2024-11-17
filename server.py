@@ -98,7 +98,7 @@ def get_image_description(base64_string):
         ]
     )
 
-    return response.choices[0]
+    return response.choices[0].message.content
 
 
 @app.route("/response", methods=['POST'])

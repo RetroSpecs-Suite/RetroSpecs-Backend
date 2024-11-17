@@ -1,11 +1,12 @@
 import cv2
 import time
-#import requests
+import requests
 from datetime import datetime
 import os
 import logging
 import hashlib
 from pathlib import Path
+import base64
 
 def compute_dhash(frame, hash_size=8):
     """
@@ -77,6 +78,7 @@ class CameraUploader:
             # Convert frame to bytes
             _, img_encoded = cv2.imencode('.jpg', frame)
             img_bytes = img_encoded.tobytes()
+            img_base64 = base64.b64encode(img_encoded.tobytes()).decode('utf-8')
             
             # Save locally
             if self.save_local:
@@ -84,7 +86,7 @@ class CameraUploader:
                 with open(img_path, 'wb') as f:
                     f.write(img_bytes)
                 
-            return img_bytes, timestamp
+            return img_base64, timestamp
             
         except Exception as e:
             self.logger.error(f"Error capturing image: {str(e)}")
@@ -107,33 +109,53 @@ class CameraUploader:
             
         return True
     
+    def upload_image(self, img_base64, timestamp):
+        """Upload image to API endpoint"""
+        filename = f"image_{timestamp}.jpg"
+        img_base64 = img_base64.replace('\n', '').replace('\r', '')
+        try:
+            data = {'filename': filename, 'base64':img_base64, 'timestamp':timestamp}
+            
+            response = requests.post(
+                self.api_endpoint,
+                json=data
+            )
+            
+            if response.status_code == 200:
+                self.logger.info(f"Successfully uploaded image from {timestamp}")
+                return True
+            else:
+                self.logger.error(f"Failed to upload image: {response.status_code}")
+                return False
+        except Exception as e:
+            self.logger.error(f"Error uploading image: {str(e)}")
+            return False
+
     def run(self, interval=5.0):
         """
         Main loop to capture and upload images
         interval: Time between captures in seconds
         """
-        self.logger.info("Starting capture and upload loop...")
-        
         try:
+            self.logger.info("Starting capture and upload loop...")
             while True:
                 start_time = time.time()
                 
                 # Capture and upload image
-                img_bytes, timestamp = self.capture_image()
-                if img_bytes:
-                    self.upload_image(img_bytes, timestamp)
+                img_base64, timestamp = self.capture_image()
+                if img_base64:
+                    self.upload_image(img_base64, timestamp)
                 
                 # Wait for remainder of interval
                 elapsed_time = time.time() - start_time
                 sleep_time = max(0, interval - elapsed_time)
                 time.sleep(sleep_time)
-                
         except KeyboardInterrupt:
             self.logger.info("Stopping capture and upload loop...")
             self.camera.release()
 
 if __name__ == "__main__":
-    API_ENDPOINT = "https://your-api-endpoint.com/upload"
+    API_ENDPOINT = "http://192.168.1.135:4000/upload_image"
     uploader = CameraUploader(
         api_endpoint=API_ENDPOINT,
         camera_id=0,  # Usually 0 for first USB camera
@@ -142,10 +164,4 @@ if __name__ == "__main__":
         similarity_threshold=25
     )
 
-    img_bytes, timestamp = uploader.capture_image()
-    print(timestamp)
-    time.sleep(3)
-    img_bytes, timestamp = uploader.capture_image()
-    if img_bytes:
-        print("nooo")
-    print(timestamp)
+    uploader.run()

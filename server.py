@@ -8,8 +8,13 @@ from PIL import Image
 import io
 import base64
 from pathlib import Path
+from openai import OpenAI
 
 app = Flask(__name__)
+
+client = OpenAI(
+    api_key=os.getenv('OPENAI_API_KEY') 
+)
 
 @app.route("/helloworld")
 def hello_world():
@@ -34,7 +39,9 @@ def upload_image():
             base64.b64decode(base64_image)
         except Exception as e:
             print(f"Invalid base64: {str(e)}")
-            
+        
+        print(get_image_description(base64_image))
+
         return {
             "message": "Image received successfully",
         }, 200
@@ -44,5 +51,44 @@ def upload_image():
             "error": str(e)
         }, 400
 
+
+def get_image_description(base64_string):
+
+    prompt = """I'm looking at an image. Please provide a very detailed description in 3-4 sentences that captures:
+        1. The main subject or subjects
+        2. Important visual details and context
+        3. Any text that might be visible
+        4. The overall setting or environment
+        
+        Make the description detailed enough that someone could recognize this specific scene or object if they encountered it."""
+    
+
+    response = client.chat.completions.create(
+    model="gpt-4o-mini",
+    messages=[
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": prompt,
+        },
+        {
+          "type": "image_url",
+          "image_url": {
+            "url":  f"data:image/jpeg;base64,{base64_string}"
+          },
+        },
+      ],
+    }
+  ],
+  max_tokens=500
+)
+
+print(response.choices[0])
+
+
 if __name__ == "__main__":
+
+    
     app.run(host='0.0.0.0', port=4000)

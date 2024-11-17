@@ -2,3 +2,4 @@ Flask
 opencv-python
 numpy
 pillow
+base64

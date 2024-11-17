@@ -113,12 +113,28 @@ def process_query():
             "errorMessage": "error occurred during db query",
         }, 400
 
+    filename = results['filename']
+
+    file_path = os.path.join("Raspberry-Pi", "captures", filename)
+
+    with open(file_path, 'rb') as f:
+        image_bytes = f.read()
+        base64_image = base64.b64encode(image_bytes).decode('utf-8')
+
+
+    timestamp = results['timestamp']
+
     json_res = json.dumps(results)
+
 
     try:
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
+                {
+                    "role": "system",
+                    "content": "Process the prompt with the following context (images with descriptions): " + str(json_res)
+                },
                 {
                     "role": "user",
                     "content": [
@@ -136,7 +152,14 @@ def process_query():
             "errorMessage": "OpenAI error: " + str(e)
         }, 400
     
-    return response.choices[0].message
+
+    # image, timestamp, content
+    
+    return {
+        "image": base64_image,
+        "timestamp": timestamp,
+        "content": response.choices[0].message
+    }
 
     
 

@@ -125,20 +125,22 @@ def process_query():
 
     timestamp = results['timestamp']
 
+    prompt = "Process the prompt with the following image description: " + str(results['description']) + " Query: " + query
+
     try:
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {
-                    "role": "system",
-                    "content": "Process the prompt with the following context (images with descriptions): " + str(results['description'])
-                },
+             #   {
+             #       "role": "system",
+             #       "content": "Process the prompt with the following context (images with descriptions): " + str(results['description'])
+             #   },
                 {
                     "role": "user",
                     "content": [
                         {
                             "type": "text",
-                            "text": query,
+                            "text": prompt,
                         },
                     ],
                 }
@@ -150,21 +152,13 @@ def process_query():
             "errorMessage": "OpenAI error: " + str(e)
         }, 400
     
-
-    # image, timestamp, content
-    print("Here", response)
-    
     return {
         "image": base64_image,
         "timestamp": timestamp,
-        "content": response.choices[0].message
+        "content": response.choices[0].message.content
     }, 200
 
 
 if __name__ == "__main__":
     db.demo_init()
-    # for result in results:
-    #     print(f"Time: {result['timestamp']}")
-    #     print(f"File: {result['filename']}")
-    #     print(f"Description: {result['description']}\n")
     app.run(host='0.0.0.0', port=4000)

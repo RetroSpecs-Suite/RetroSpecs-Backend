@@ -9,11 +9,14 @@ import io
 import base64
 from pathlib import Path
 from openai import OpenAI
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
 
 client = OpenAI(
-    api_key=os.getenv('OPENAI_API_KEY') 
+    api_key=os.getenv('OPENAI_API_KEY')
 )
 
 @app.route("/helloworld")
@@ -36,7 +39,9 @@ def upload_image():
 
         try:
         # Test if it's valid base64
-            base64.b64decode(base64_image)
+            image_data = base64.b64decode(base64_image)
+            #image = Image.open(io.BytesIO(image_data))
+            #print(f"Image size: {image.size}")
         except Exception as e:
             print(f"Invalid base64: {str(e)}")
         
@@ -47,6 +52,7 @@ def upload_image():
         }, 200
        
     except Exception as e:
+        print(str(e))
         return {
             "error": str(e)
         }, 400
@@ -64,31 +70,28 @@ def get_image_description(base64_string):
     
 
     response = client.chat.completions.create(
-    model="gpt-4o-mini",
-    messages=[
-    {
-      "role": "user",
-      "content": [
-        {
-          "type": "text",
-          "text": prompt,
-        },
-        {
-          "type": "image_url",
-          "image_url": {
-            "url":  f"data:image/jpeg;base64,{base64_string}"
-          },
-        },
-      ],
-    }
-  ],
-  max_tokens=500
-)
+        model="gpt-4o-mini",
+        messages=[
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": prompt,
+                    },
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url":  f"data:image/jpeg;base64,{base64_string}"
+                        },
+                    },
+                ],
+            }
+        ]
+    )
 
-print(response.choices[0])
+    return response.choices[0]
 
 
 if __name__ == "__main__":
-
-    
     app.run(host='0.0.0.0', port=4000)

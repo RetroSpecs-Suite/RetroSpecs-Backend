@@ -69,16 +69,20 @@ class CameraUploader:
             if not ret:
                 self.logger.error("Failed to capture image from camera")
                 return None, None
-            
+
             # Check for duplicate
             if not self.is_image_unique(frame):
                 self.logger.info(f"Non-unique image: {timestamp}")
                 return None, None
             
+            # Downscale
+            frameDownscaled = cv2.resize(frame, (1280, 720), interpolation=cv2.INTER_AREA)
             # Convert frame to bytes
             _, img_encoded = cv2.imencode('.jpg', frame)
             img_bytes = img_encoded.tobytes()
-            img_base64 = base64.b64encode(img_encoded.tobytes()).decode('utf-8')
+
+            _, img_encoded_down = cv2.imencode('.jpg', frameDownscaled)
+            img_base64 = base64.b64encode(img_encoded_down.tobytes()).decode('utf-8')
             
             # Save locally
             if self.save_local:
@@ -131,7 +135,7 @@ class CameraUploader:
             self.logger.error(f"Error uploading image: {str(e)}")
             return False
 
-    def run(self, interval=5.0):
+    def run(self, interval=10.0):
         """
         Main loop to capture and upload images
         interval: Time between captures in seconds

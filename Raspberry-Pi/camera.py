@@ -159,7 +159,7 @@ class CameraUploader:
             self.camera.release()
 
 if __name__ == "__main__":
-    API_ENDPOINT = "http://192.168.1.135:4000/upload_image"
+    API_ENDPOINT = "http://172.20.10.3:4000/upload_image"
     uploader = CameraUploader(
         api_endpoint=API_ENDPOINT,
         camera_id=0,  # Usually 0 for first USB camera

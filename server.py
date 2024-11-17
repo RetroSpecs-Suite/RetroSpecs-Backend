@@ -125,7 +125,7 @@ def process_query():
 
     timestamp = results['timestamp']
 
-    prompt = "Process the prompt with the following image description: " + str(results['description']) + " Query: " + query
+    prompt = "Respond to this question based on the following image and its description: " + str(results['description']) + " Question: " + query
 
     try:
         response = client.chat.completions.create(
@@ -142,6 +142,12 @@ def process_query():
                             "type": "text",
                             "text": prompt,
                         },
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url":  f"data:image/jpeg;base64,{base64_image}"
+                        },
+                    },
                     ],
                 }
             ]

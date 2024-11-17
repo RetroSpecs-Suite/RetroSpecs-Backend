@@ -12,12 +12,14 @@ from openai import OpenAI
 from dotenv import load_dotenv
 import chromadb
 from vectorDB import VectorDB
+from flask_cors import CORS
 
 db = VectorDB()
 
 load_dotenv()
 
 app = Flask(__name__)
+CORS(app)
 
 client = OpenAI(
     api_key=os.getenv('OPENAI_API_KEY')
@@ -106,7 +108,7 @@ def process_query():
     query = data['query']
 
     try:
-       results = db.query_photos(query)
+       results = db.query_photos(query)[0]
     except Exception as e:
         print(str(e))
         return {
@@ -121,11 +123,7 @@ def process_query():
         image_bytes = f.read()
         base64_image = base64.b64encode(image_bytes).decode('utf-8')
 
-
     timestamp = results['timestamp']
-
-    json_res = json.dumps(results)
-
 
     try:
         response = client.chat.completions.create(
@@ -133,7 +131,7 @@ def process_query():
             messages=[
                 {
                     "role": "system",
-                    "content": "Process the prompt with the following context (images with descriptions): " + str(json_res)
+                    "content": "Process the prompt with the following context (images with descriptions): " + str(results['description'])
                 },
                 {
                     "role": "user",
@@ -154,17 +152,19 @@ def process_query():
     
 
     # image, timestamp, content
+    print("Here", response)
     
     return {
         "image": base64_image,
         "timestamp": timestamp,
         "content": response.choices[0].message
-    }
-
-    
-
-        
+    }, 200
 
 
 if __name__ == "__main__":
+    db.demo_init()
+    # for result in results:
+    #     print(f"Time: {result['timestamp']}")
+    #     print(f"File: {result['filename']}")
+    #     print(f"Description: {result['description']}\n")
     app.run(host='0.0.0.0', port=4000)
